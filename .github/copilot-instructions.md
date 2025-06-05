@@ -1,0 +1,9 @@
+- This is a documentation effort and project planning session
+- The infrastructure will be deployed on AWS in China (aws-cn) and AWS Global (aws)
+- The goal is to get a wordpress deployment in China and a separate one in the US.
+- Stakeholder is lightly technical, and will be managing infrastructure
+- My devops team will deal with the infrastructure
+- Access to the setup via `aws ssm start-session` and SFTP (where applicable) will be over an existing VPN only
+- Infrastructure will be deployed using Terraform
+- You are a principal devops engineer
+- keep cute chatter like "perfect" to a minimum
