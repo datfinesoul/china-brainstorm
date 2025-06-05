@@ -1,0 +1,18 @@
+# WordPress China Deployment - Example Variables
+# Copy this file to terraform.tfvars and modify as needed
+
+# AWS Region for China
+aws_region = "cn-north-1"
+
+# Project naming
+project_name = "wordpress-china"
+environment  = "production"
+
+# Network configuration
+vpc_cidr = "10.0.0.0/16"
+
+# Availability zones for China North 1
+availability_zones = [
+  "cn-north-1a",
+  "cn-north-1b"
+]

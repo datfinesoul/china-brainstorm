@@ -136,13 +136,13 @@
 ## Day-One Cost (China Region Only)
 ### China Region (USD/month)
 - **EC2 t3.medium**: ~$35/month  
-- **RDS db.t3.micro (Multi-AZ)**: ~$25/month
+- **RDS db.t3.small (Multi-AZ)**: ~$35/month
 - **EBS Storage (default)**: ~$5/month
 - **ALB**: ~$20/month
 - **CloudFront**: ~$5-10/month (minimal traffic)
 - **NAT Gateway**: ~$15/month
 - **Data Transfer**: ~$5/month
-- **Total China region**: ~$110/month
+- **Total China region**: ~$120/month
 
 **Note**: Other region costs will be similar when deployed
 
@@ -175,9 +175,9 @@ ASG Settings (Manual replacement only):
 
 #### 3. **RDS Database Strategy (Data Persistence)**
 **Day-One Solution**: RDS MySQL for China region data persistence
-- **RDS Instance**: db.t3.micro (Multi-AZ for availability) - China-specific
+- **RDS Instance**: db.t3.small (Multi-AZ for availability) - China-specific
 - **Database Engine**: MySQL 8.0 (compatible with Bitnami WordPress)
-- **Storage**: 20GB GP2 with auto-scaling enabled
+- **Storage**: 20GB GP3 with auto-scaling enabled
 - **Backup**: 7-day retention with automated snapshots
 - **Security**: Private subnets only, security group from EC2
 - **Isolation**: China RDS instance specific to China region
@@ -259,8 +259,8 @@ ASG Settings (Manual replacement only):
   - [ ] **Document template for Global adaptation**
 
 - [ ] **Create RDS MySQL Database (cn-north-1)**:
-  - [ ] db.t3.micro instance (Multi-AZ for availability)
-  - [ ] MySQL 8.0 engine, 20GB storage with auto-scaling
+  - [ ] db.t3.small instance (Multi-AZ for availability)
+  - [ ] MySQL 8.0 engine, 20GB GP3 storage with auto-scaling
   - [ ] Private subnets only, database subnet group
   - [ ] Security group allowing access from EC2 instances
   - [ ] 7-day backup retention with automated snapshots
