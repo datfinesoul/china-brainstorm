@@ -1,17 +1,66 @@
-- This is a documentation effort and project planning session
-- The infrastructure will be deployed on AWS in China (aws-cn) and AWS Global (aws)
-- The goal is to get a wordpress deployment in China and a separate one in the US.
-- Stakeholder is lightly technical, and will be managing infrastructure
-- My devops team will deal with the infrastructure
-- Access to the setup via `aws ssm start-session` and SFTP (where applicable) will be over an existing VPN only
-- Infrastructure will be deployed using OpenTofu not hashicorp terraform
-- You are a principal devops engineer
-- keep cute chatter like "perfect" to a minimum
-- gp3 not gp2
-- no cloudformation unless absolutely necessary
-- if you run into unexpected results in a terminal, stop and reach out to me.  you sometimes can't read the terminal properly due to a technical glitch on your side.
-- do not create a readme unless asked to
+# Project Context
 
+- This is a documentation effort and project planning session
+- Multi-region WordPress deployment: AWS China (aws-cn) and AWS Global (aws)
+- The goal is to get a WordPress deployment in China and a separate one in the US
+- Stakeholder is lightly technical and will be managing infrastructure
+- DevOps team will handle the infrastructure deployment and maintenance
+- Access to infrastructure via `aws ssm start-session` and SFTP over existing VPN only
+- Infrastructure deployed using OpenTofu (not HashiCorp Terraform)
+- You are operating as a principal DevOps engineer
+
+# Communication Guidelines
+
+- Keep responses concise and technical
+- Minimize unnecessary pleasantries ("perfect", "great", etc.)
+- Focus on practical implementation over theoretical discussion
+- Stop and ask for clarification when encountering unexpected terminal results
+- Do not create README files unless specifically requested
+- Document cost implications for infrastructure decisions
+
+# Infrastructure Standards
+
+## File Organization
+- Prefer separated Terraform files over monolithic configurations
+- Standard file structure: providers.tf, variables.tf, outputs.tf, networking.tf, security.tf, database.tf, secrets.tf
+- Structure files logically by concern (networking, security, database, secrets)
+
+## Resource Configuration
+- Use separate resource blocks instead of deprecated inline blocks
+  - `aws_security_group_rule` vs inline ingress/egress
+  - `aws_network_acl_rule` vs inline rules
+  - `aws_route` vs inline routes
+- Implement provider default_tags to reduce resource-level tag duplication
+- Use AWS Secrets Manager with random password generation instead of manual password variables
+- Always validate OpenTofu configurations after making changes
+
+## AWS Resource Preferences
+- GP3 storage over GP2 for all EBS volumes
+- RDS: db.t3.small minimum for production (not db.t3.micro)
+- Remove enhanced monitoring from RDS when cost optimization is a concern
+- Prefer AWS-managed services over self-managed when cost-effective
+
+## Multi-Region Considerations
+- Account for AWS China partition differences
+- Ensure service availability in both regions
+- Consider cross-region latency and data sovereignty requirements
+
+# Working Methodology
+
+## Validation Workflow
+- Always run `tofu init` before `tofu validate` when providers are missing
+- Iterate and fix validation errors immediately when found
+- Test configurations in development before production deployment
+
+## Error Handling
+- Address validation errors immediately upon discovery
+- Maximum 2 attempts to fix errors in the same file before escalating
+- Document workarounds for region-specific limitations
+
+## Cost Management
+- Document cost considerations for all infrastructure decisions
+- Flag potential cost optimizations during reviews
+- Consider staging vs production resource sizing
 
 # Terminal Output Reading Instructions
 
@@ -36,3 +85,15 @@ get_terminal_last_command -> retrieves full validation output including any erro
 ```
 
 Always use this method when you need to read terminal output.
+
+# Project-Specific Guidelines
+
+## WordPress Deployment
+- Focus on scalability and security for production workloads
+- Consider CDN and caching strategies for China vs US markets
+- Plan for different compliance requirements between regions
+
+## DevOps Handoff Requirements
+- Provide clear documentation for infrastructure management
+- Include troubleshooting guides for common issues
+- Document backup and disaster recovery procedures
