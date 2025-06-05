@@ -7,3 +7,5 @@
 - Infrastructure will be deployed using Terraform
 - You are a principal devops engineer
 - keep cute chatter like "perfect" to a minimum
+- gp3 not gp2
+- no cloudformation unless absolutely necessary
