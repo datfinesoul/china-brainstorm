@@ -86,3 +86,14 @@ output "db_password_secret_name" {
   description = "Name of the database password secret in AWS Secrets Manager"
   value       = aws_secretsmanager_secret.db_password.name
 }
+
+# ALB and WordPress Security Group outputs
+output "alb_security_group_id" {
+  description = "ID of the ALB security group"
+  value       = aws_security_group.alb.id
+}
+
+output "wordpress_security_group_id" {
+  description = "ID of the WordPress security group"
+  value       = aws_security_group.wordpress.id
+}
