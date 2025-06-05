@@ -16,3 +16,7 @@ availability_zones = [
   "cn-north-1a",
   "cn-north-1b"
 ]
+
+# Database configuration
+# Set a strong password for the WordPress database
+db_password = "change-me-to-a-strong-password"

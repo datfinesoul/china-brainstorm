@@ -50,3 +50,39 @@ output "vpc_endpoints_security_group_id" {
   description = "ID of the VPC endpoints security group"
   value       = aws_security_group.vpc_endpoints.id
 }
+
+# Database outputs
+output "rds_endpoint" {
+  description = "RDS instance endpoint"
+  value       = aws_db_instance.wordpress.endpoint
+}
+
+output "rds_port" {
+  description = "RDS instance port"
+  value       = aws_db_instance.wordpress.port
+}
+
+output "rds_database_name" {
+  description = "RDS database name"
+  value       = aws_db_instance.wordpress.db_name
+}
+
+output "rds_username" {
+  description = "RDS database username"
+  value       = aws_db_instance.wordpress.username
+}
+
+output "rds_security_group_id" {
+  description = "ID of the RDS security group"
+  value       = aws_security_group.rds.id
+}
+
+output "db_password_secret_arn" {
+  description = "ARN of the database password secret in AWS Secrets Manager"
+  value       = aws_secretsmanager_secret.db_password.arn
+}
+
+output "db_password_secret_name" {
+  description = "Name of the database password secret in AWS Secrets Manager"
+  value       = aws_secretsmanager_secret.db_password.name
+}
