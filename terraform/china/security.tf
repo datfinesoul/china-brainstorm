@@ -3,11 +3,13 @@
 
 # Security Group for Application Load Balancer
 resource "aws_security_group" "alb" {
-  name_prefix = "${var.project_name}-alb-"
+  name_prefix = "internet-facing-alb-"
   vpc_id      = aws_vpc.main.id
 
   tags = {
-    Name = "${var.project_name}-alb-sg"
+    Name        = "internet-facing-alb"
+    Purpose     = "Security group for ALBs in public subnets with internet access"
+    Subnet-Type = "public"
   }
 }
 
@@ -44,11 +46,13 @@ resource "aws_security_group_rule" "alb_egress_all" {
 
 # Security Group for EC2 WordPress Instances
 resource "aws_security_group" "wordpress" {
-  name_prefix = "${var.project_name}-wordpress-"
+  name_prefix = "application-tier-"
   vpc_id      = aws_vpc.main.id
 
   tags = {
-    Name = "${var.project_name}-wordpress-sg"
+    Name        = "application-tier"
+    Purpose     = "Security group for application instances in private subnets"
+    Subnet-Type = "private"
   }
 }
 
@@ -71,6 +75,28 @@ resource "aws_security_group_rule" "wordpress_ingress_https_from_alb" {
   source_security_group_id = aws_security_group.alb.id
   security_group_id        = aws_security_group.wordpress.id
   description              = "HTTPS from ALB"
+}
+
+# SFTP access for file transfers (matches NACL rule)
+resource "aws_security_group_rule" "wordpress_ingress_sftp" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = [aws_vpc.main.cidr_block]
+  security_group_id = aws_security_group.wordpress.id
+  description       = "SFTP for file transfers (no SSH shell access)"
+}
+
+# ICMP ping for health checks and troubleshooting (matches NACL rule)
+resource "aws_security_group_rule" "wordpress_ingress_icmp" {
+  type              = "ingress"
+  from_port         = 8
+  to_port           = 0
+  protocol          = "icmp"
+  cidr_blocks       = [aws_vpc.main.cidr_block]
+  security_group_id = aws_security_group.wordpress.id
+  description       = "ICMP ping for health checks and network troubleshooting"
 }
 
 resource "aws_security_group_rule" "wordpress_egress_all" {

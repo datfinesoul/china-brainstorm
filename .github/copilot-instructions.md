@@ -17,6 +17,7 @@
 - Stop and ask for clarification when encountering unexpected terminal results
 - Do not create README files unless specifically requested
 - Document cost implications for infrastructure decisions
+- Give brief summaries after making changes, not essays
 
 # Infrastructure Standards
 

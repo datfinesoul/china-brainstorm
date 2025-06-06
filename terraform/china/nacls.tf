@@ -7,7 +7,9 @@ resource "aws_network_acl" "public" {
   subnet_ids = aws_subnet.public[*].id
 
   tags = {
-    Name = "${var.project_name}-public-nacl"
+    Name        = "internet-facing"
+    Purpose     = "Network ACL for public subnets with internet access (ALB, NAT Gateway)"
+    Subnet-Type = "public"
   }
 }
 
@@ -55,7 +57,9 @@ resource "aws_network_acl" "private" {
   subnet_ids = aws_subnet.private[*].id
 
   tags = {
-    Name = "${var.project_name}-private-nacl"
+    Name        = "application-tier"
+    Purpose     = "Network ACL for private subnets hosting WordPress instances"
+    Subnet-Type = "private"
   }
 }
 
@@ -91,6 +95,17 @@ resource "aws_network_acl_rule" "private_ingress_sftp" {
   cidr_block     = aws_vpc.main.cidr_block
   from_port      = 22
   to_port        = 22
+}
+
+# ICMP ping for network troubleshooting and health checks
+resource "aws_network_acl_rule" "private_ingress_icmp" {
+  network_acl_id = aws_network_acl.private.id
+  rule_number    = 125
+  protocol       = "icmp"
+  rule_action    = "allow"
+  cidr_block     = aws_vpc.main.cidr_block
+  icmp_type      = 8
+  icmp_code      = 0
 }
 
 resource "aws_network_acl_rule" "private_ingress_ephemeral" {

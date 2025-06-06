@@ -18,12 +18,12 @@ terraform {
 # Configure AWS Provider for China partition
 provider "aws" {
   region = var.aws_region
-  
+
   # China partition specific configuration
   endpoints {
     # Use China-specific endpoints if needed
   }
-  
+
   # Default tags applied to all resources
   default_tags {
     tags = {

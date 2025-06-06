@@ -3,11 +3,13 @@
 
 # Security Group for RDS
 resource "aws_security_group" "rds" {
-  name_prefix = "${var.project_name}-rds-"
+  name_prefix = "database-tier-"
   vpc_id      = aws_vpc.main.id
 
   tags = {
-    Name = "${var.project_name}-rds-sg"
+    Name        = "database-tier"
+    Purpose     = "Security group for RDS instances in database subnets"
+    Subnet-Type = "database"
   }
 }
 
@@ -35,7 +37,12 @@ resource "aws_security_group_rule" "rds_egress_all" {
 # RDS Parameter Group for MySQL 8.0
 resource "aws_db_parameter_group" "wordpress" {
   family = "mysql8.0"
-  name   = "${var.project_name}-mysql80-params"
+  name   = "${var.project_name}-mysql80"
+
+  tags = {
+    Name    = "${var.project_name}-mysql80"
+    Purpose = "MySQL 8.0 parameter group for ${var.project_name}"
+  }
 
   parameter {
     name  = "innodb_buffer_pool_size"
@@ -56,15 +63,16 @@ resource "aws_db_parameter_group" "wordpress" {
     name  = "long_query_time"
     value = "2"
   }
-
-  tags = {
-    Name = "${var.project_name}-mysql80-params"
-  }
 }
 
 # RDS MySQL Instance
 resource "aws_db_instance" "wordpress" {
   identifier = "${var.project_name}-mysql"
+
+  tags = {
+    Name    = "${var.project_name}-mysql"
+    Purpose = "MySQL database instance for ${var.project_name}"
+  }
 
   # Engine Configuration
   engine         = "mysql"
@@ -92,22 +100,18 @@ resource "aws_db_instance" "wordpress" {
 
   # Backup Configuration
   backup_retention_period = 7
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "sun:04:00-sun:05:00"
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "sun:04:00-sun:05:00"
 
   # Monitoring and Logging
-  enabled_cloudwatch_logs_exports      = ["error", "general", "slowquery"]
-  performance_insights_enabled         = true
+  enabled_cloudwatch_logs_exports       = ["error", "general", "slowquery"]
+  performance_insights_enabled          = true
   performance_insights_retention_period = 7
 
   # Security
-  deletion_protection = true
-  skip_final_snapshot = false
+  deletion_protection       = true
+  skip_final_snapshot       = false
   final_snapshot_identifier = "${var.project_name}-mysql-final-snapshot"
-
-  tags = {
-    Name = "${var.project_name}-mysql"
-  }
 
   depends_on = [aws_cloudwatch_log_group.rds_logs]
 }
@@ -115,11 +119,7 @@ resource "aws_db_instance" "wordpress" {
 # CloudWatch Log Groups for RDS
 resource "aws_cloudwatch_log_group" "rds_logs" {
   for_each = toset(["error", "general", "slowquery"])
-  
+
   name              = "/aws/rds/instance/${var.project_name}-mysql/${each.key}"
   retention_in_days = 7
-
-  tags = {
-    Name = "${var.project_name}-rds-${each.key}-logs"
-  }
 }
