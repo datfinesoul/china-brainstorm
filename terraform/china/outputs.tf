@@ -97,3 +97,63 @@ output "wordpress_security_group_id" {
   description = "ID of the WordPress security group"
   value       = aws_security_group.wordpress.id
 }
+
+# Application Load Balancer outputs
+output "alb_dns_name" {
+  description = "DNS name of the Application Load Balancer"
+  value       = aws_lb.wordpress.dns_name
+}
+
+output "alb_zone_id" {
+  description = "Hosted zone ID of the Application Load Balancer"
+  value       = aws_lb.wordpress.zone_id
+}
+
+output "alb_arn" {
+  description = "ARN of the Application Load Balancer"
+  value       = aws_lb.wordpress.arn
+}
+
+# CloudFront outputs (conditional)
+output "cloudfront_domain_name" {
+  description = "Domain name of the CloudFront distribution"
+  value       = var.domain_name != "" ? aws_cloudfront_distribution.wordpress[0].domain_name : null
+}
+
+output "cloudfront_distribution_id" {
+  description = "ID of the CloudFront distribution"
+  value       = var.domain_name != "" ? aws_cloudfront_distribution.wordpress[0].id : null
+}
+
+# Launch Template outputs
+output "launch_template_id" {
+  description = "ID of the WordPress launch template"
+  value       = aws_launch_template.wordpress.id
+}
+
+output "launch_template_latest_version" {
+  description = "Latest version of the WordPress launch template"
+  value       = aws_launch_template.wordpress.latest_version
+}
+
+# Auto Scaling Group outputs
+output "autoscaling_group_name" {
+  description = "Name of the WordPress Auto Scaling Group"
+  value       = aws_autoscaling_group.wordpress.name
+}
+
+output "autoscaling_group_arn" {
+  description = "ARN of the WordPress Auto Scaling Group"
+  value       = aws_autoscaling_group.wordpress.arn
+}
+
+# WordPress access information
+output "wordpress_url" {
+  description = "WordPress site URL via CloudFront or ALB"
+  value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${aws_lb.wordpress.dns_name}"
+}
+
+output "wordpress_admin_url" {
+  description = "WordPress admin URL"
+  value       = var.domain_name != "" ? "https://${var.domain_name}/wp-admin" : "http://${aws_lb.wordpress.dns_name}/wp-admin"
+}

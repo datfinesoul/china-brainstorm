@@ -35,3 +35,9 @@ variable "availability_zones" {
   type        = list(string)
   default     = ["cn-north-1a", "cn-north-1b"]
 }
+
+variable "domain_name" {
+  description = "Domain name for WordPress site (e.g., example.com)"
+  type        = string
+  default     = ""
+}

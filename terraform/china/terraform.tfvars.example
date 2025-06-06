@@ -17,6 +17,10 @@ availability_zones = [
   "cn-north-1b"
 ]
 
-# Database configuration
-# Set a strong password for the WordPress database
-db_password = "change-me-to-a-strong-password"
+# Domain Configuration (optional)
+# If provided, will create ACM certificate and CloudFront distribution
+# If empty, will use ALB DNS name only
+domain_name = ""
+
+# Example with domain:
+# domain_name = "example.com.cn"

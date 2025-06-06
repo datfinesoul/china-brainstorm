@@ -108,3 +108,36 @@ resource "aws_security_group_rule" "wordpress_egress_all" {
   security_group_id = aws_security_group.wordpress.id
   description       = "All outbound traffic"
 }
+
+# Security Group for RDS Database
+resource "aws_security_group" "rds" {
+  name_prefix = "database-tier-"
+  vpc_id      = aws_vpc.main.id
+
+  tags = {
+    Name        = "database-tier"
+    Purpose     = "Security group for RDS instances in database subnets"
+    Subnet-Type = "database"
+  }
+}
+
+# RDS Security Group Rules
+resource "aws_security_group_rule" "rds_ingress_mysql" {
+  type              = "ingress"
+  from_port         = 3306
+  to_port           = 3306
+  protocol          = "tcp"
+  cidr_blocks       = aws_subnet.private[*].cidr_block
+  security_group_id = aws_security_group.rds.id
+  description       = "MySQL from private subnets"
+}
+
+resource "aws_security_group_rule" "rds_egress_all" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.rds.id
+  description       = "All outbound traffic"
+}

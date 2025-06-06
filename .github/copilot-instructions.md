@@ -98,3 +98,15 @@ Always use this method when you need to read terminal output.
 - Provide clear documentation for infrastructure management
 - Include troubleshooting guides for common issues
 - Document backup and disaster recovery procedures
+
+# Important
+
+- **CRITICAL: Do only what is explicitly requested - do not add extra work or "helpful" additions**
+- **CRITICAL: Read the actual scope of the request before starting work**
+
+# Working Methodology
+
+## Scope Discipline
+- **STOP at the requested task boundary - do not add unrequested work**
+- **Ask for clarification if scope is unclear rather than assuming**
+- **One task = one response, unless explicitly asked to continue**
