@@ -115,17 +115,17 @@ output "alb_arn" {
 }
 
 # CloudFront outputs (conditional)
-output "cloudfront_domain_name" {
-  description = "Domain name of the CloudFront distribution"
-  value       = var.domain_name != "" ? aws_cloudfront_distribution.wordpress[0].domain_name : null
-}
+# Commented out until domain is ready
+# output "cloudfront_domain_name" {
+#   description = "Domain name of the CloudFront distribution"
+#   value       = var.domain_name != "" ? aws_cloudfront_distribution.wordpress[0].domain_name : null
+# }
 
-output "cloudfront_distribution_id" {
-  description = "ID of the CloudFront distribution"
-  value       = var.domain_name != "" ? aws_cloudfront_distribution.wordpress[0].id : null
-}
+# output "cloudfront_distribution_id" {
+#   description = "ID of the CloudFront distribution"
+#   value       = var.domain_name != "" ? aws_cloudfront_distribution.wordpress[0].id : null
+# }
 
-# Launch Template outputs
 # Launch Template outputs
 output "launch_template_id" {
   description = "ID of the WordPress launch template"
@@ -150,11 +150,11 @@ output "autoscaling_group_arn" {
 
 # WordPress access information
 output "wordpress_url" {
-  description = "WordPress site URL via CloudFront or ALB"
-  value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${aws_lb.wordpress.dns_name}"
+  description = "WordPress site URL via ALB"
+  value       = "http://${aws_lb.wordpress.dns_name}"
 }
 
 output "wordpress_admin_url" {
   description = "WordPress admin URL"
-  value       = var.domain_name != "" ? "https://${var.domain_name}/wp-admin" : "http://${aws_lb.wordpress.dns_name}/wp-admin"
+  value       = "http://${aws_lb.wordpress.dns_name}/wp-admin"
 }
