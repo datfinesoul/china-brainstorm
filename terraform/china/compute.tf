@@ -1,14 +1,19 @@
 # WordPress China Deployment - Compute Resources
 # AWS China (cn-north-1) - EC2 Launch Template and Auto Scaling
 
-# Data source to find the latest Bitnami WordPress AMI in China
-data "aws_ami" "bitnami_wordpress" {
+# Data source for Amazon Linux 2 AMI (Bitnami not available in AWS China)
+data "aws_ami" "amazon_linux" {
   most_recent = true
-  owners      = ["679593333241"] # Bitnami's AWS account ID
+  owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["bitnami-wordpress-*"]
+    values = ["amzn2-ami-hvm-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
   }
 
   filter {
@@ -64,8 +69,8 @@ resource "aws_iam_instance_profile" "wordpress_instance" {
 # Launch Template for WordPress instances
 resource "aws_launch_template" "wordpress" {
   name_prefix   = "${var.project_name}-wordpress-"
-  description   = "Launch template for WordPress instances with Bitnami AMI"
-  image_id      = data.aws_ami.bitnami_wordpress.id
+  description   = "Launch template for WordPress instances with Amazon Linux 2"
+  image_id      = data.aws_ami.amazon_linux.id
   instance_type = "t3.medium"
 
   # Security
@@ -78,7 +83,7 @@ resource "aws_launch_template" "wordpress" {
 
   # Storage configuration
   block_device_mappings {
-    device_name = "/dev/sda1"
+    device_name = "/dev/xvda"
     ebs {
       volume_size           = 20
       volume_type           = "gp3"

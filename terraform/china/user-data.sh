@@ -1,135 +1,203 @@
 #!/bin/bash
-# WordPress Configuration Script for Bitnami AMI
-# Configures WordPress to work with ALB and RDS MySQL
+# WordPress Installation Script for Amazon Linux 2
+# AWS China Region - Manual WordPress Setup
 
-set -e
-
-# Variables from Terraform
+# Set variables from Terraform template
 DB_HOST="${db_host}"
 DB_NAME="${db_name}"
 DB_USERNAME="${db_username}"
 SECRET_ARN="${secret_arn}"
 REGION="${region}"
 
-# Log file for debugging
-LOGFILE="/var/log/wordpress-config.log"
-exec 1> >(tee -a $LOGFILE)
-exec 2>&1
+# Log all output
+exec > >(tee /var/log/user-data.log) 2>&1
 
-echo "Starting WordPress configuration at $(date)"
+echo "Starting WordPress installation on Amazon Linux 2..."
 
-# Install AWS CLI if not present
-if ! command -v aws &> /dev/null; then
-    echo "Installing AWS CLI..."
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    unzip awscliv2.zip
-    ./aws/install
-fi
+# Update system
+yum update -y
 
-# Get database password from Secrets Manager
-echo "Retrieving database password from Secrets Manager..."
-DB_SECRET=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --region "$REGION" --query SecretString --output text)
-DB_PASSWORD=$(echo "$DB_SECRET" | jq -r '.password')
+# Install required packages
+yum install -y httpd php php-mysqlnd php-gd php-xml php-mbstring php-json awscli jq
 
-if [ -z "$DB_PASSWORD" ]; then
-    echo "ERROR: Could not retrieve database password from Secrets Manager"
-    exit 1
-fi
+# Start and enable Apache
+systemctl start httpd
+systemctl enable httpd
 
-# Stop Apache and MySQL services
-echo "Stopping Bitnami services..."
-sudo /opt/bitnami/ctlscript.sh stop
+# Configure PHP
+sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 100M/' /etc/php.ini
+sed -i 's/post_max_size = 8M/post_max_size = 100M/' /etc/php.ini
+sed -i 's/max_execution_time = 30/max_execution_time = 300/' /etc/php.ini
+sed -i 's/memory_limit = 128M/memory_limit = 256M/' /etc/php.ini
 
-# Configure WordPress wp-config.php for external RDS
-echo "Configuring WordPress for external RDS database..."
-WP_CONFIG="/opt/bitnami/wordpress/wp-config.php"
+# Get database password from AWS Secrets Manager
+DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --region "$REGION" --query SecretString --output text | jq -r .password)
 
-# Backup original wp-config.php
-sudo cp "$WP_CONFIG" "$WP_CONFIG.backup"
+# Download and configure WordPress
+cd /var/www/html
+wget https://wordpress.org/latest.tar.gz
+tar -xzf latest.tar.gz
+mv wordpress/* .
+rm -rf wordpress latest.tar.gz
 
-# Update database configuration
-sudo sed -i "s/define( 'DB_NAME', '.*' );/define( 'DB_NAME', '$DB_NAME' );/" "$WP_CONFIG"
-sudo sed -i "s/define( 'DB_USER', '.*' );/define( 'DB_USER', '$DB_USERNAME' );/" "$WP_CONFIG"
-sudo sed -i "s/define( 'DB_PASSWORD', '.*' );/define( 'DB_PASSWORD', '$DB_PASSWORD' );/" "$WP_CONFIG"
-sudo sed -i "s/define( 'DB_HOST', '.*' );/define( 'DB_HOST', '$DB_HOST' );/" "$WP_CONFIG"
+# Set ownership and permissions
+chown -R apache:apache /var/www/html
+chmod -R 755 /var/www/html
 
-# Configure WordPress for ALB (handle X-Forwarded-Proto)
-echo "Configuring WordPress for Application Load Balancer..."
-cat << 'EOF' | sudo tee -a "$WP_CONFIG" > /dev/null
+# Create wp-config.php
+cat > wp-config.php << EOF
+<?php
+define('DB_NAME', '$DB_NAME');
+define('DB_USER', '$DB_USERNAME');
+define('DB_PASSWORD', '$DB_PASSWORD');
+define('DB_HOST', '$DB_HOST');
+define('DB_CHARSET', 'utf8');
+define('DB_COLLATE', '');
+
+// Security keys (will be replaced with real ones below)
+define('AUTH_KEY',         'put your unique phrase here');
+define('SECURE_AUTH_KEY',  'put your unique phrase here');
+define('LOGGED_IN_KEY',    'put your unique phrase here');
+define('NONCE_KEY',        'put your unique phrase here');
+define('AUTH_SALT',        'put your unique phrase here');
+define('SECURE_AUTH_SALT', 'put your unique phrase here');
+define('LOGGED_IN_SALT',   'put your unique phrase here');
+define('NONCE_SALT',       'put your unique phrase here');
+
+\$table_prefix = 'wp_';
 
 // ALB and CloudFront configuration
-if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-    $_SERVER['HTTPS'] = 'on';
+if (isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && \$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    \$_SERVER['HTTPS'] = 'on';
 }
 
 // Trust ALB forwarded headers
-if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-    $forwarded_ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-    $_SERVER['REMOTE_ADDR'] = trim($forwarded_ips[0]);
+if (isset(\$_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    \$forwarded_ips = explode(',', \$_SERVER['HTTP_X_FORWARDED_FOR']);
+    \$_SERVER['REMOTE_ADDR'] = trim(\$forwarded_ips[0]);
+}
+
+define('WP_DEBUG', false);
+
+if ( ! defined( 'ABSPATH' ) ) {
+    define( 'ABSPATH', dirname( __FILE__ ) . '/' );
+}
+
+require_once( ABSPATH . 'wp-settings.php' );
+EOF
+
+# Generate unique security keys
+curl -s https://api.wordpress.org/secret-key/1.1/salt/ > /tmp/wp-salt.txt
+if [ -s /tmp/wp-salt.txt ]; then
+    # Replace placeholder keys with real ones
+    sed -i '/AUTH_KEY/,/NONCE_SALT/d' wp-config.php
+    sed -i '/DB_COLLATE/r /tmp/wp-salt.txt' wp-config.php
+fi
+
+# Set proper permissions for wp-config.php
+chmod 644 wp-config.php
+
+# Create .htaccess for pretty URLs
+cat > .htaccess << 'EOF'
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %%{REQUEST_FILENAME} !-f
+RewriteCond %%{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress
+EOF
+
+# Configure Apache virtual host
+cat > /etc/httpd/conf.d/wordpress.conf << EOF
+<Directory "/var/www/html">
+    AllowOverride All
+    Options Indexes FollowSymLinks
+    Require all granted
+</Directory>
+
+# ALB health check endpoint
+<Location "/health">
+    SetHandler server-status
+    Require all granted
+</Location>
+
+# Enable status module for health checks
+LoadModule status_module modules/mod_status.so
+ExtendedStatus On
+EOF
+
+# Enable mod_rewrite for pretty URLs
+echo "LoadModule rewrite_module modules/mod_rewrite.so" >> /etc/httpd/conf/httpd.conf
+
+# Restart Apache to apply configuration
+systemctl restart httpd
+
+# Install CloudWatch agent for monitoring
+yum install -y amazon-cloudwatch-agent
+
+# Configure CloudWatch agent
+cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << EOF
+{
+    "logs": {
+        "logs_collected": {
+            "files": {
+                "collect_list": [
+                    {
+                        "file_path": "/var/log/httpd/access_log",
+                        "log_group_name": "/aws/ec2/wordpress/apache/access",
+                        "log_stream_name": "{instance_id}"
+                    },
+                    {
+                        "file_path": "/var/log/httpd/error_log",
+                        "log_group_name": "/aws/ec2/wordpress/apache/error",
+                        "log_stream_name": "{instance_id}"
+                    },
+                    {
+                        "file_path": "/var/log/user-data.log",
+                        "log_group_name": "/aws/ec2/wordpress/user-data",
+                        "log_stream_name": "{instance_id}"
+                    }
+                ]
+            }
+        }
+    },
+    "metrics": {
+        "namespace": "WordPress/EC2",
+        "metrics_collected": {
+            "cpu": {
+                "measurement": ["cpu_usage_idle", "cpu_usage_iowait", "cpu_usage_user", "cpu_usage_system"],
+                "metrics_collection_interval": 300
+            },
+            "disk": {
+                "measurement": ["used_percent"],
+                "metrics_collection_interval": 300,
+                "resources": ["*"]
+            },
+            "diskio": {
+                "measurement": ["io_time"],
+                "metrics_collection_interval": 300,
+                "resources": ["*"]
+            },
+            "mem": {
+                "measurement": ["mem_used_percent"],
+                "metrics_collection_interval": 300
+            }
+        }
+    }
 }
 EOF
 
-# Configure Apache for ALB health checks
-echo "Configuring Apache for ALB health checks..."
-cat << 'EOF' | sudo tee /opt/bitnami/apache/conf/vhosts/wordpress-alb.conf > /dev/null
-<VirtualHost *:80>
-    DocumentRoot /opt/bitnami/wordpress
-    
-    # ALB health check endpoint
-    <Location "/health">
-        SetHandler server-status
-        Require all granted
-    </Location>
-    
-    # WordPress configuration
-    <Directory "/opt/bitnami/wordpress">
-        Options -Indexes +FollowSymLinks +MultiViews
-        AllowOverride All
-        Require all granted
-    </Directory>
-    
-    # Logging
-    ErrorLog /opt/bitnami/apache/logs/wordpress_error.log
-    CustomLog /opt/bitnami/apache/logs/wordpress_access.log combined
-</VirtualHost>
-EOF
+# Start CloudWatch agent
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 
-# Enable mod_rewrite and headers for WordPress
-echo "Enabling Apache modules..."
-sudo /opt/bitnami/apache/bin/httpd -M | grep -q rewrite || sudo /opt/bitnami/apache/bin/a2enmod rewrite
-sudo /opt/bitnami/apache/bin/httpd -M | grep -q headers || sudo /opt/bitnami/apache/bin/a2enmod headers
+# Create a completion marker
+echo "WORDPRESS_INSTALL_COMPLETE" > /tmp/wordpress-ready
 
-# Disable local MySQL service (using RDS)
-echo "Disabling local MySQL service..."
-sudo /opt/bitnami/ctlscript.sh stop mysql
-sudo systemctl disable bitnami.service || true
-
-# Start Apache
-echo "Starting Apache service..."
-sudo /opt/bitnami/ctlscript.sh start apache
-
-# Install WordPress CLI for additional configuration
-echo "Installing WP-CLI..."
-curl -O https://raw.githubusercontent.com/wp-cli/wp-cli/v2.8.1/bin/wp-cli.phar
-chmod +x wp-cli.phar
-sudo mv wp-cli.phar /usr/local/bin/wp
-
-# Set proper permissions
-echo "Setting WordPress permissions..."
-sudo chown -R bitnami:daemon /opt/bitnami/wordpress
-sudo find /opt/bitnami/wordpress -type d -exec chmod 755 {} \;
-sudo find /opt/bitnami/wordpress -type f -exec chmod 644 {} \;
-
-# Signal that configuration is complete
-echo "WordPress configuration completed successfully at $(date)"
-echo "WORDPRESS_CONFIG_COMPLETE" > /tmp/wordpress-ready
-
-# Test database connection
-echo "Testing database connection..."
-if wp db check --path=/opt/bitnami/wordpress --allow-root; then
-    echo "Database connection successful"
-else
-    echo "WARNING: Database connection test failed"
-fi
-
-echo "WordPress setup script completed at $(date)"
+echo "WordPress installation completed. Server ready for configuration."
+echo "Access WordPress at: http://$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)/"
+echo "Database connection configured for: $DB_HOST"
+echo "Log files available in CloudWatch Logs"

@@ -126,6 +126,7 @@ output "cloudfront_distribution_id" {
 }
 
 # Launch Template outputs
+# Launch Template outputs
 output "launch_template_id" {
   description = "ID of the WordPress launch template"
   value       = aws_launch_template.wordpress.id
